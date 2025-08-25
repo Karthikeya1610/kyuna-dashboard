@@ -1,0 +1,6 @@
+export const Actions = {
+  LOGIN_SUCCESS: "LOGIN_SUCCESS",
+  LOGIN_FAILURE: "LOGIN_FAILURE",
+  LOGOUT: "LOGOUT",
+  RESET_ALL: "RESET_ALL",
+};
