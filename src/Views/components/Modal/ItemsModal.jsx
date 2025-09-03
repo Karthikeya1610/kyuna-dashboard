@@ -10,12 +10,14 @@ import {
   Row,
   Col,
   Spin,
+  Select,
 } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import context from "../../../Context/context";
 
 const { TextArea } = Input;
 const { Dragger } = Upload;
+const { Option } = Select;
 
 const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -278,10 +280,13 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
           </Row>
 
           <Form.Item label="Availability" required>
-            <Input
+            <Select
               value={formData?.availability}
-              onChange={(e) => handleChange("availability", e.target.value)}
-            />
+              onChange={(value) => handleChange("availability", value)}
+            >
+              <Option value="In Stock">In Stock</Option>
+              <Option value="Out of Stock">Out of Stock</Option>
+            </Select>
           </Form.Item>
 
           <Form.Item label="Images" required>
