@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import {
   Search,
   ChevronDown,
@@ -8,158 +8,242 @@ import {
   Grid,
   Percent,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
+import { message } from "antd";
+import context from "../../Context/context";
 import "./Queries.css";
 
 const Queries = () => {
-  const [tickets, setTickets] = useState([]);
-  const [filteredTickets, setFilteredTickets] = useState([]);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  const {
+    queries: {
+      getAllQueries,
+      updateQuery,
+      bulkUpdateQueries,
+      getQueryStats,
+      queries,
+      queryStats,
+      loading,
+      hasMore,
+      currentPage,
+    },
+  } = useContext(context);
+
+  const [filteredQueries, setFilteredQueries] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("open");
-  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [selectedQuery, setSelectedQuery] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data for demonstration
+  // Infinite scroll observer
+  const observer = useRef();
+  const lastQueryRef = useCallback(
+    (node) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMoreQueries();
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loading, hasMore]
+  );
+
+  const loadMoreQueries = async () => {
+    if (!loading && hasMore) {
+      await getAllQueries(currentPage + 1, true);
+    }
+  };
+
+  // Fetch queries and stats on component mount
   useEffect(() => {
-    const mockTickets = [
-      {
-        id: "12345",
-        customer: "Sophia Clark",
-        issue: "Order Inquiry",
-        status: "open",
-        assignedAgent: "Unassigned",
-        lastUpdated: "2 hours ago",
-        priority: "high",
-        category: "order",
-      },
-      {
-        id: "12346",
-        customer: "Ethan Bennett",
-        issue: "Product Return",
-        status: "pending",
-        assignedAgent: "Liam Harper",
-        lastUpdated: "1 day ago",
-        priority: "medium",
-        category: "return",
-      },
-      {
-        id: "12347",
-        customer: "Olivia Carter",
-        issue: "Payment Issue",
-        status: "open",
-        assignedAgent: "Unassigned",
-        lastUpdated: "3 days ago",
-        priority: "high",
-        category: "payment",
-      },
-      {
-        id: "12348",
-        customer: "Noah Foster",
-        issue: "Shipping Delay",
-        status: "open",
-        assignedAgent: "Unassigned",
-        lastUpdated: "5 days ago",
-        priority: "medium",
-        category: "shipping",
-      },
-      {
-        id: "12349",
-        customer: "Ava Mitchell",
-        issue: "Damaged Product",
-        status: "pending",
-        assignedAgent: "Liam Harper",
-        lastUpdated: "1 week ago",
-        priority: "high",
-        category: "damage",
-      },
-      {
-        id: "12350",
-        customer: "William Davis",
-        issue: "Size Exchange",
-        status: "closed",
-        assignedAgent: "Emma Wilson",
-        lastUpdated: "2 weeks ago",
-        priority: "low",
-        category: "exchange",
-      },
-    ];
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        console.log("Fetching queries data...");
+        const [queriesResponse, statsResponse] = await Promise.all([
+          getAllQueries(1, false),
+          getQueryStats(),
+        ]);
+        console.log("Queries response:", queriesResponse);
+        console.log("Stats response:", statsResponse);
+      } catch (error) {
+        console.error("Error fetching queries data:", error);
+        messageApi.error("Failed to fetch queries data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []); // Empty dependency array since functions are stable
 
-    setTickets(mockTickets);
-    setFilteredTickets(mockTickets);
-  }, []);
-
+  // Filter queries based on search and tab
   useEffect(() => {
-    let filtered = tickets;
+    console.log("Current queries state:", queries);
+    let filtered = queries || [];
 
     // Apply tab filter
     if (activeTab !== "all") {
-      filtered = filtered.filter((ticket) => ticket.status === activeTab);
+      filtered = filtered.filter(
+        (query) => query.status?.toLowerCase() === activeTab.toLowerCase()
+      );
     }
 
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(
-        (ticket) =>
-          ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ticket.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase())
+        (query) =>
+          query._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          query.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          query.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          query.subject?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    setFilteredTickets(filtered);
-  }, [activeTab, searchTerm, tickets]);
+    console.log("Filtered queries:", filtered);
+    setFilteredQueries(filtered);
+  }, [activeTab, searchTerm, queries]);
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "open":
         return "#fef3c7";
-      case "pending":
+      case "in_progress":
         return "#dbeafe";
-      case "closed":
+      case "resolved":
         return "#dcfce7";
+      case "closed":
+        return "#f3f4f6";
       default:
         return "#f3f4f6";
     }
   };
 
   const getStatusTextColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "open":
         return "#92400e";
-      case "pending":
+      case "in_progress":
         return "#1e40af";
-      case "closed":
+      case "resolved":
         return "#166534";
+      case "closed":
+        return "#6b7280";
       default:
         return "#374151";
     }
   };
 
   const getStatusLabel = (status) => {
-    switch (status) {
+    if (!status) return "Unknown";
+    switch (status.toLowerCase()) {
       case "open":
         return "Open";
-      case "pending":
-        return "Pending";
+      case "in_progress":
+        return "In Progress";
+      case "resolved":
+        return "Resolved";
       case "closed":
         return "Closed";
       default:
-        return "Unknown";
+        return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     }
   };
 
-  const openTicketDetails = (ticket) => {
-    setSelectedTicket(ticket);
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case "high":
+        return "#ef4444";
+      case "medium":
+        return "#f59e0b";
+      case "low":
+        return "#10b981";
+      default:
+        return "#6b7280";
+    }
   };
 
-  const closeTicketDetails = () => {
-    setSelectedTicket(null);
+  const getPriorityLabel = (priority) => {
+    if (!priority) return "Unknown";
+    return priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
   };
+
+  const formatTimeAgo = (timestamp) => {
+    if (!timestamp) return "Unknown";
+
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+    if (diffInSeconds < 3600)
+      return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000)
+      return `${Math.floor(diffInSeconds / 86400)} days ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const openQueryDetails = (query) => {
+    setSelectedQuery(query);
+  };
+
+  const closeQueryDetails = () => {
+    setSelectedQuery(null);
+  };
+
+  const handleStatusUpdate = async (queryId, newStatus) => {
+    try {
+      const response = await updateQuery(queryId, { status: newStatus });
+      if (response) {
+        messageApi.success("Query status updated successfully!");
+        // Refresh queries
+        await getAllQueries(1, false);
+      }
+    } catch (error) {
+      console.error("Error updating query status:", error);
+      messageApi.error("Failed to update query status");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="queries">
+        <div className="queries-header">
+          <div className="header-text">
+            <h1>Customer Support Queries</h1>
+            <p>Manage and resolve customer inquiries efficiently</p>
+          </div>
+        </div>
+        <div className="loading-container">
+          <Loader2 className="loading-spinner" size={48} />
+          <p>Loading queries...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Debug info
+  console.log("Render state:", {
+    queries,
+    filteredQueries,
+    loading,
+    hasMore,
+    currentPage,
+  });
 
   return (
     <div className="queries">
+      {contextHolder}
       <div className="queries-header">
         <div className="header-text">
-          <h1>Customer Support Tickets</h1>
+          <h1>Customer Support Queries</h1>
           <p>Manage and resolve customer inquiries efficiently</p>
         </div>
       </div>
@@ -170,7 +254,7 @@ const Queries = () => {
             <Search size={20} className="search-icon" />
             <input
               type="text"
-              placeholder="Search tickets by ID, customer, or issue"
+              placeholder="Search queries by ID, customer, or subject"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
@@ -181,16 +265,30 @@ const Queries = () => {
         <div className="filters-section">
           <div className="status-tabs">
             <button
+              className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
+              onClick={() => setActiveTab("all")}
+            >
+              All
+            </button>
+            <button
               className={`tab-btn ${activeTab === "open" ? "active" : ""}`}
               onClick={() => setActiveTab("open")}
             >
               Open
             </button>
             <button
-              className={`tab-btn ${activeTab === "pending" ? "active" : ""}`}
-              onClick={() => setActiveTab("pending")}
+              className={`tab-btn ${
+                activeTab === "in_progress" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("in_progress")}
             >
-              Pending
+              In Progress
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "resolved" ? "active" : ""}`}
+              onClick={() => setActiveTab("resolved")}
+            >
+              Resolved
             </button>
             <button
               className={`tab-btn ${activeTab === "closed" ? "active" : ""}`}
@@ -199,114 +297,228 @@ const Queries = () => {
               Closed
             </button>
           </div>
-
-          <div className="filter-dropdowns">
-            <div className="filter-dropdown">
-              <span>Unassigned</span>
-              <ChevronDown size={16} />
-            </div>
-            <div className="filter-dropdown">
-              <span>High Priority</span>
-              <ChevronDown size={16} />
-            </div>
-            <div className="filter-dropdown">
-              <span>New</span>
-              <ChevronDown size={16} />
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="tickets-table-container">
-        <table className="tickets-table">
+      <div className="queries-table-container">
+        <table className="queries-table">
           <thead>
             <tr>
-              <th>Ticket ID</th>
+              <th>Query ID</th>
               <th>Customer</th>
-              <th>Issue</th>
+              <th>Subject</th>
+              <th>Category</th>
+              <th>Priority</th>
               <th>Status</th>
-              <th>Assigned Agent</th>
-              <th>Last Updated</th>
+              <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredTickets.map((ticket) => (
-              <tr key={ticket.id}>
-                <td className="ticket-id">#{ticket.id}</td>
-                <td className="customer-name">{ticket.customer}</td>
-                <td className="issue">{ticket.issue}</td>
-                <td>
-                  <span className={`status-badge ${ticket.status}`}>
-                    {getStatusLabel(ticket.status)}
-                  </span>
-                </td>
-                <td className="assigned-agent">{ticket.assignedAgent}</td>
-                <td className="last-updated">{ticket.lastUpdated}</td>
-                <td>
-                  <button
-                    className="view-btn"
-                    onClick={() => openTicketDetails(ticket)}
-                  >
-                    <Eye size={16} />
-                    View
-                  </button>
+            {filteredQueries && filteredQueries.length > 0 ? (
+              filteredQueries.map((query, index) => (
+                <tr
+                  key={query._id}
+                  ref={
+                    index === filteredQueries.length - 1 ? lastQueryRef : null
+                  }
+                >
+                  <td className="query-id">#{query._id.slice(-6)}</td>
+                  <td className="customer-name">
+                    <div className="customer-info">
+                      <span className="name">
+                        {query.user?.name || "Unknown"}
+                      </span>
+                      <span className="email">{query.user?.email}</span>
+                    </div>
+                  </td>
+                  <td className="subject">{query.subject}</td>
+                  <td className="category">
+                    <span className="category-badge">{query.category}</span>
+                  </td>
+                  <td className="priority">
+                    <span
+                      className="priority-badge"
+                      style={{ color: getPriorityColor(query.priority) }}
+                    >
+                      {getPriorityLabel(query.priority)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${query.status}`}>
+                      {getStatusLabel(query.status)}
+                    </span>
+                  </td>
+                  <td className="created-at">
+                    {formatTimeAgo(query.createdAt)}
+                  </td>
+                  <td>
+                    <button
+                      className="view-btn"
+                      onClick={() => openQueryDetails(query)}
+                    >
+                      <Eye size={16} />
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan="8"
+                  style={{ textAlign: "center", padding: "40px" }}
+                >
+                  <div className="no-queries">
+                    <HelpCircle size={48} className="no-queries-icon" />
+                    <h3>No queries found</h3>
+                    <p>Try adjusting your filters or search criteria</p>
+                  </div>
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
-      {filteredTickets.length === 0 && (
-        <div className="no-tickets">
-          <HelpCircle size={48} className="no-tickets-icon" />
-          <h3>No tickets found</h3>
-          <p>Try adjusting your filters or search criteria</p>
+      {loading && (
+        <div className="loading-more">
+          <Loader2 className="loading-spinner" size={24} />
+          <p>Loading more queries...</p>
         </div>
       )}
 
-      {/* Ticket Details Modal */}
-      {selectedTicket && (
-        <div className="modal-overlay" onClick={closeTicketDetails}>
+      {/* Query Details Modal */}
+      {selectedQuery && (
+        <div className="modal-overlay" onClick={closeQueryDetails}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Ticket Details - #{selectedTicket.id}</h2>
-              <button className="close-btn" onClick={closeTicketDetails}>
+              <h2>Query Details - #{selectedQuery._id.slice(-6)}</h2>
+              <button className="close-btn" onClick={closeQueryDetails}>
                 ×
               </button>
             </div>
 
             <div className="modal-body">
               <div className="detail-section">
-                <h3>Ticket Information</h3>
+                <h3>Query Information</h3>
                 <div className="detail-grid">
                   <div className="detail-item">
-                    <label>Ticket ID:</label>
-                    <span>#{selectedTicket.id}</span>
+                    <label>Query ID:</label>
+                    <span>#{selectedQuery._id.slice(-6)}</span>
                   </div>
                   <div className="detail-item">
                     <label>Customer:</label>
-                    <span>{selectedTicket.customer}</span>
+                    <span>{selectedQuery.user?.name || "Unknown"}</span>
                   </div>
                   <div className="detail-item">
-                    <label>Issue:</label>
-                    <span>{selectedTicket.issue}</span>
+                    <label>Email:</label>
+                    <span>{selectedQuery.user?.email}</span>
                   </div>
                   <div className="detail-item">
-                    <label>Status:</label>
-                    <span className={`status-badge ${selectedTicket.status}`}>
-                      {getStatusLabel(selectedTicket.status)}
+                    <label>Subject:</label>
+                    <span>{selectedQuery.subject}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Message:</label>
+                    <span className="message-content">
+                      {selectedQuery.message}
                     </span>
                   </div>
                   <div className="detail-item">
-                    <label>Assigned Agent:</label>
-                    <span>{selectedTicket.assignedAgent}</span>
+                    <label>Category:</label>
+                    <span className="category-badge">
+                      {selectedQuery.category}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Priority:</label>
+                    <span
+                      className="priority-badge"
+                      style={{
+                        color: getPriorityColor(selectedQuery.priority),
+                      }}
+                    >
+                      {getPriorityLabel(selectedQuery.priority)}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Status:</label>
+                    <span className={`status-badge ${selectedQuery.status}`}>
+                      {getStatusLabel(selectedQuery.status)}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Created:</label>
+                    <span>
+                      {new Date(selectedQuery.createdAt).toLocaleString()}
+                    </span>
                   </div>
                   <div className="detail-item">
                     <label>Last Updated:</label>
-                    <span>{selectedTicket.lastUpdated}</span>
+                    <span>
+                      {new Date(selectedQuery.updatedAt).toLocaleString()}
+                    </span>
                   </div>
+                </div>
+              </div>
+
+              {selectedQuery.tags && selectedQuery.tags.length > 0 && (
+                <div className="detail-section">
+                  <h3>Tags</h3>
+                  <div className="tags-container">
+                    {selectedQuery.tags.map((tag, index) => (
+                      <span key={index} className="tag">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="detail-section">
+                <h3>Actions</h3>
+                <div className="action-buttons">
+                  {selectedQuery.status !== "closed" && (
+                    <button
+                      className="action-btn close-btn"
+                      onClick={() =>
+                        handleStatusUpdate(selectedQuery._id, "closed")
+                      }
+                    >
+                      Close Query
+                    </button>
+                  )}
+                  {selectedQuery.status === "open" && (
+                    <button
+                      className="action-btn in-progress-btn"
+                      onClick={() =>
+                        handleStatusUpdate(selectedQuery._id, "in_progress")
+                      }
+                    >
+                      Mark as In Progress
+                    </button>
+                  )}
+                  {selectedQuery.status === "in_progress" && (
+                    <button
+                      className="action-btn resolve-btn"
+                      onClick={() =>
+                        handleStatusUpdate(selectedQuery._id, "resolved")
+                      }
+                    >
+                      Mark as Resolved
+                    </button>
+                  )}
+                  {selectedQuery.status === "resolved" && (
+                    <button
+                      className="action-btn close-btn"
+                      onClick={() =>
+                        handleStatusUpdate(selectedQuery._id, "closed")
+                      }
+                    >
+                      Close Query
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -17,16 +17,33 @@ import context from "../../../Context/context";
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
+const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const [deletedImages, setDeletedImages] = useState([]); // Track deleted images
 
   const {
-    items: { uploadImage, getItemsCreate, getItemsUpdate, itemsId },
+    items: {
+      uploadImage,
+      getItemsCreate,
+      getItemsUpdate,
+      itemsId,
+      deleteImage,
+    },
   } = useContext(context);
   const [formData, setFormData] = useState({});
+
   useEffect(() => {
     setFormData(itemsId?.item);
+    // Clear deleted images when modal opens with new data
+    setDeletedImages([]);
   }, [itemsId]);
+
+  // Clear deleted images when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setDeletedImages([]);
+    }
+  }, [isOpen]);
 
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -41,6 +58,47 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
 
   const handleUploadChange = ({ fileList }) => {
     console.log("File list:", fileList);
+
+    // Get the current images from formData
+    const currentImages = formData.images || [];
+
+    // Find images that were removed (they exist in currentImages but not in fileList)
+    const removedImages = currentImages.filter((currentImg) => {
+      // Check if this image is no longer in the fileList
+      return !fileList.some((file) => {
+        // For existing images, check by publicId
+        if (currentImg.publicId && file.uid === currentImg.publicId) {
+          return true;
+        }
+        // For new images, check by uid
+        if (currentImg.uid && file.uid === currentImg.uid) {
+          return true;
+        }
+        return false;
+      });
+    });
+
+    // Add removed images to deletedImages state if they have publicId (server images)
+    const imagesToDelete = removedImages.filter(
+      (img) => img.publicId && img.url?.startsWith("http")
+    );
+    if (imagesToDelete.length > 0) {
+      setDeletedImages((prev) => {
+        // Avoid duplicates by checking if image is already in deletedImages
+        const newDeletedImages = [...prev];
+        imagesToDelete.forEach((img) => {
+          if (
+            !newDeletedImages.some(
+              (deletedImg) => deletedImg.publicId === img.publicId
+            )
+          ) {
+            newDeletedImages.push(img);
+          }
+        });
+        return newDeletedImages;
+      });
+    }
+
     setFormData((prev) => ({
       ...prev,
       images: fileList.map((file) => ({
@@ -51,9 +109,26 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
         originFileObj: file.originFileObj,
       })),
     }));
+
+    // Remove images from deletedImages state if they are re-added
+    setDeletedImages((prev) => {
+      return prev.filter((deletedImg) => {
+        // If this deleted image is found in the current fileList, it was re-added
+        const wasReAdded = fileList.some((file) => {
+          if (deletedImg.publicId && file.uid === deletedImg.publicId) {
+            return true; // Image was re-added
+          }
+          return false;
+        });
+        // Keep the image in deletedImages only if it was NOT re-added
+        return !wasReAdded;
+      });
+    });
   };
 
   console.log("actionType:", actionType);
+  console.log("Deleted images:", deletedImages);
+  console.log("Current formData images:", formData?.images);
 
   const handleSubmit = async () => {
     try {
@@ -85,21 +160,50 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
         }
       }
 
+      // Prepare the payload with uploaded images
+      const payload = {
+        ...formData,
+        images: uploadedImages,
+      };
+
       if (actionType === "edit") {
-        const updateResponse = await getItemsUpdate(
-          formData.itemData._id,
-          formData
-        );
+        const updateResponse = await getItemsUpdate(formData._id, payload);
 
         if (updateResponse) {
+          // Delete the removed images from server after successful update
+          if (deletedImages.length > 0) {
+            console.log(
+              `Deleting ${deletedImages.length} removed images from server`
+            );
+            for (const deletedImg of deletedImages) {
+              try {
+                if (deletedImg.publicId) {
+                  const publicIdParts = deletedImg.publicId.split("/");
+                  const filename = publicIdParts[publicIdParts.length - 1];
+                  await deleteImage(filename);
+                  console.log(`Successfully deleted image: ${filename}`);
+                }
+              } catch (error) {
+                console.error(
+                  `Failed to delete image ${deletedImg.publicId}:`,
+                  error
+                );
+                // Continue with other images even if one fails
+              }
+            }
+          }
+
           message.success("Item updated successfully!");
+          onSuccess && onSuccess(); // Refresh the items list
           onClose();
+          setDeletedImages([]); // Clear deleted images state
         }
       } else {
-        const createResponse = await getItemsCreate(finalPayload);
+        const createResponse = await getItemsCreate(payload);
 
         if (createResponse) {
           message.success("Item created successfully!");
+          onSuccess && onSuccess(); // Refresh the items list
           onClose();
         }
       }
@@ -111,8 +215,13 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
     }
   };
 
+  const handleClose = () => {
+    setDeletedImages([]); // Clear deleted images when modal is closed
+    onClose();
+  };
+
   return (
-    <ReactModal isOpen={isOpen} onClose={onClose}>
+    <ReactModal isOpen={isOpen} onClose={handleClose}>
       {isLoading ? (
         <Spin
           size="large"
@@ -180,6 +289,8 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
               multiple
               accept="image/*"
               listType="picture"
+              beforeUpload={() => false} // Prevent automatic upload
+              customRequest={() => {}} // Custom request handler to prevent default
               fileList={formData?.images?.map((img) => ({
                 uid: img?.publicId,
                 name: img?.publicId,
@@ -195,6 +306,22 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
                 Click or drag images to this area to upload
               </p>
             </Dragger>
+            {deletedImages.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 8,
+                  backgroundColor: "#fff2e8",
+                  border: "1px solid #ffbb96",
+                  borderRadius: 4,
+                  fontSize: "12px",
+                  color: "#d46b08",
+                }}
+              >
+                ⚠️ {deletedImages.length} image(s) will be permanently deleted
+                when you save changes
+              </div>
+            )}
           </Form.Item>
 
           <Form.Item label="Description">
@@ -246,7 +373,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading }) => {
           </Row>
 
           <Form.Item style={{ textAlign: "right" }}>
-            <Button onClick={onClose} style={{ marginRight: 10 }}>
+            <Button onClick={handleClose} style={{ marginRight: 10 }}>
               Cancel
             </Button>
             <Button type="primary" onClick={handleSubmit} loading={loading}>

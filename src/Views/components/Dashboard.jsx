@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   LineChart,
   Line,
@@ -19,11 +19,16 @@ import {
   DollarSign,
   ShoppingCart,
 } from "lucide-react";
+import context from "../../Context/context";
 import "./Dashboard.css";
 
 const Dashboard = () => {
   const [salesData, setSalesData] = useState([]);
   const [stockData, setStockData] = useState([]);
+
+  const {
+    orders: { getOrdersOverview, ordersOverview },
+  } = useContext(context);
 
   // Mock data for demonstration
   useEffect(() => {
@@ -50,6 +55,9 @@ const Dashboard = () => {
 
     setSalesData(generateSalesData());
     setStockData(generateStockData());
+
+    // Fetch orders overview
+    getOrdersOverview();
   }, []);
 
   const totalSales = salesData.reduce((sum, item) => sum + item.sales, 0);
@@ -95,7 +103,72 @@ const Dashboard = () => {
             <p className="stat-value">{outOfStockCount}</p>
           </div>
         </div>
+
+        {ordersOverview && (
+          <div className="stat-card">
+            <div className="stat-icon orders">
+              <Package size={24} />
+            </div>
+            <div className="stat-content">
+              <h3>Total Orders</h3>
+              <p className="stat-value">
+                {ordersOverview.stats?.totalOrders || 0}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Orders Overview Section */}
+      {ordersOverview && (
+        <div className="orders-overview-section">
+          <div className="section-header">
+            <h3>Orders Overview</h3>
+            <div className="orders-performance">
+              <span className="performance-value">
+                ${ordersOverview.stats?.totalRevenue?.toLocaleString() || 0}
+              </span>
+              <span className="performance-trend positive">Total Revenue</span>
+            </div>
+          </div>
+
+          <div className="orders-stats-grid">
+            <div className="order-stat">
+              <h4>Total Revenue</h4>
+              <p>
+                ${ordersOverview.stats?.totalRevenue?.toLocaleString() || 0}
+              </p>
+            </div>
+            <div className="order-stat">
+              <h4>Average Order Value</h4>
+              <p>
+                $
+                {ordersOverview.stats?.averageOrderValue?.toLocaleString() || 0}
+              </p>
+            </div>
+            <div className="order-stat">
+              <h4>Total Orders</h4>
+              <p>{ordersOverview.stats?.totalOrders || 0}</p>
+            </div>
+          </div>
+
+          {ordersOverview.stats?.statusBreakdown && (
+            <div className="status-breakdown-section">
+              <h4>Order Status Breakdown ({ordersOverview.stats.period})</h4>
+              <div className="status-breakdown-grid">
+                {Object.entries(ordersOverview.stats.statusBreakdown).map(
+                  ([status, count]) => (
+                    <div key={status} className="status-breakdown-item">
+                      <span className="status-name">{status}</span>
+                      <span className="status-count">{count}</span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Sales Overview Section */}
       <div className="sales-overview-section">

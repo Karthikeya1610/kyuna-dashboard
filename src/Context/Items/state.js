@@ -7,20 +7,61 @@ import { Actions } from "./actions";
 export const initialState = {
   items: null,
   itemsId: null,
+  loading: false,
+  hasMore: true,
+  currentPage: 1,
+  searchTerm: "",
 };
 
 export const ItemState = () => {
   const [state, dispatch] = useReducer(Reducer, initialState);
 
-  const getItems = async () => {
+  const getItems = async (page = 1, append = false, searchTerm = "") => {
     try {
-      const response = await axios.get(`${API_URLS.ITEMS}`);
-      dispatch({ type: Actions.GET_ITEMS, payload: response.data });
+      dispatch({ type: Actions.SET_LOADING, payload: true });
+
+      let url = `${API_URLS.ITEMS}`;
+      const params = new URLSearchParams();
+
+      if (searchTerm) {
+        params.append("q", searchTerm);
+        params.append("page", page);
+        params.append("limit", 15);
+        url = `${API_URLS.ITEMS}/search?${params.toString()}`;
+      } else {
+        params.append("page", page);
+        url = `${API_URLS.ITEMS}?${params.toString()}`;
+      }
+
+      const response = await axios.get(url);
+
+      if (append) {
+        dispatch({
+          type: Actions.APPEND_ITEMS,
+          payload: {
+            items: response.data.items,
+            pagination: response.data.pagination,
+            searchTerm: searchTerm,
+          },
+        });
+      } else {
+        dispatch({
+          type: Actions.GET_ITEMS,
+          payload: {
+            items: response.data.items,
+            pagination: response.data.pagination,
+            searchTerm: searchTerm,
+          },
+        });
+      }
+
       console.log("items", response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching items:", error);
       return error;
+    } finally {
+      dispatch({ type: Actions.SET_LOADING, payload: false });
     }
   };
 
