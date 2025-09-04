@@ -192,10 +192,7 @@ const AdminLogin = ({
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <span className="loading-spinner">
-                    <div className="spinner"></div>
-                    Signing in...
-                  </span>
+                  <span className="">Signing in...</span>
                 ) : (
                   "Sign In"
                 )}

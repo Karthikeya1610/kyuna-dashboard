@@ -1,4 +1,10 @@
 import { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import AdminLogin from "./Views/components/AdminLogin";
 import AdminDashboard from "./Views/components/AdminDashboard";
 import "./App.css";
@@ -30,16 +36,45 @@ function App() {
     console.log("Logged out successfully");
   };
 
-  if (isLoggedIn) {
-    return <AdminDashboard onLogout={handleLogout} />;
-  }
-
   return (
-    <AdminLogin
-      onLogin={handleLogin}
-      title="Kyuna Dashboard"
-      subtitle="Admin access portal"
-    />
+    <Router>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            !isLoggedIn ? (
+              <AdminLogin
+                onLogin={handleLogin}
+                title="Kyuna Dashboard"
+                subtitle="Admin access portal"
+              />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          }
+        />
+        <Route
+          path="/dashboard/*"
+          element={
+            isLoggedIn ? (
+              <AdminDashboard onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/"
+          element={
+            isLoggedIn ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+      </Routes>
+    </Router>
   );
 }
 

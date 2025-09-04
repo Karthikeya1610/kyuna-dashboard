@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Dashboard from "./Dashboard";
 import Orders from "./Orders";
@@ -8,33 +8,20 @@ import Categories from "./Categories";
 import "./AdminDashboard.css";
 
 const AdminDashboard = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState("dashboard");
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case "dashboard":
-        return <Dashboard />;
-      case "orders":
-        return <Orders />;
-      case "items":
-        return <Items />;
-      case "categories":
-        return <Categories />;
-      case "queries":
-        return <Queries />;
-      default:
-        return <Dashboard />;
-    }
-  };
+  console.log("AdminDashboard rendered");
 
   return (
     <div className="admin-dashboard">
-      <Sidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onLogout={onLogout}
-      />
-      <main className="main-content">{renderContent()}</main>
+      <Sidebar onLogout={onLogout} />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="items" element={<Items />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="queries" element={<Queries />} />
+        </Routes>
+      </main>
     </div>
   );
 };

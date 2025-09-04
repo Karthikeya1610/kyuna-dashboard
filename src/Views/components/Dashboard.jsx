@@ -23,6 +23,7 @@ import context from "../../Context/context";
 import "./Dashboard.css";
 
 const Dashboard = () => {
+  console.log("Dashboard component rendered");
   const [salesData, setSalesData] = useState([]);
   const [stockData, setStockData] = useState([]);
 

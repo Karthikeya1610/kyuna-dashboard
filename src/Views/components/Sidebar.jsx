@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -11,15 +12,37 @@ import {
 } from "lucide-react";
 import "./Sidebar.css";
 
-const Sidebar = ({ activeTab, onTabChange, onLogout }) => {
+const Sidebar = ({ onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "orders", label: "Orders", icon: ShoppingCart },
-    { id: "items", label: "Items", icon: Package },
-    { id: "queries", label: "User Queries", icon: MessageSquare },
-    { id: "categories", label: "Categories", icon: Grid },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+    },
+    {
+      id: "orders",
+      label: "Orders",
+      icon: ShoppingCart,
+      path: "/dashboard/orders",
+    },
+    { id: "items", label: "Items", icon: Package, path: "/dashboard/items" },
+    {
+      id: "queries",
+      label: "User Queries",
+      icon: MessageSquare,
+      path: "/dashboard/queries",
+    },
+    {
+      id: "categories",
+      label: "Categories",
+      icon: Grid,
+      path: "/dashboard/categories",
+    },
   ];
 
   const toggleSidebar = () => {
@@ -30,6 +53,7 @@ const Sidebar = ({ activeTab, onTabChange, onLogout }) => {
     if (onLogout) {
       onLogout();
     }
+    navigate("/login");
   };
 
   return (
@@ -47,13 +71,16 @@ const Sidebar = ({ activeTab, onTabChange, onLogout }) => {
         <ul className="nav-list">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
+            const isActive =
+              item.id === "dashboard"
+                ? location.pathname === "/dashboard" ||
+                  location.pathname === "/dashboard/"
+                : location.pathname === item.path;
             return (
               <li key={item.id} className="nav-item">
                 <button
-                  className={`nav-link ${
-                    activeTab === item.id ? "active" : ""
-                  }`}
-                  onClick={() => onTabChange(item.id)}
+                  className={`nav-link ${isActive ? "active" : ""}`}
+                  onClick={() => navigate(item.path)}
                 >
                   <IconComponent size={20} />
                   {!isCollapsed && <span>{item.label}</span>}
