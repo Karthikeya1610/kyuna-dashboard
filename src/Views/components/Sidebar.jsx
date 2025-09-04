@@ -7,6 +7,7 @@ import {
   Menu,
   X,
   LogOut,
+  Grid,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -18,6 +19,7 @@ const Sidebar = ({ activeTab, onTabChange, onLogout }) => {
     { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "items", label: "Items", icon: Package },
     { id: "queries", label: "User Queries", icon: MessageSquare },
+    { id: "categories", label: "Categories", icon: Grid },
   ];
 
   const toggleSidebar = () => {

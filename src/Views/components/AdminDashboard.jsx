@@ -4,6 +4,7 @@ import Dashboard from "./Dashboard";
 import Orders from "./Orders";
 import Items from "./Items";
 import Queries from "./Queries";
+import Categories from "./Categories";
 import "./AdminDashboard.css";
 
 const AdminDashboard = ({ onLogout }) => {
@@ -17,6 +18,8 @@ const AdminDashboard = ({ onLogout }) => {
         return <Orders />;
       case "items":
         return <Items />;
+      case "categories":
+        return <Categories />;
       case "queries":
         return <Queries />;
       default:

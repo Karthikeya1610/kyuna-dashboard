@@ -6,6 +6,7 @@ const API_URLS = {
   IMAGE: `${BaseURL}/image`,
   ORDERS: `${BaseURL}/orders`,
   QUERIES: `${BaseURL}/queries`,
+  CATEGORIES: `${BaseURL}/categories`,
 };
 
 export default API_URLS;

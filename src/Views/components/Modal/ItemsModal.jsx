@@ -22,6 +22,7 @@ const { Option } = Select;
 const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [deletedImages, setDeletedImages] = useState([]); // Track deleted images
+  const [showValidation, setShowValidation] = useState(false); // Track if validation should be shown
 
   const {
     items: {
@@ -31,18 +32,52 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
       itemsId,
       deleteImage,
     },
+    categories: { getAllCategories, categories },
   } = useContext(context);
   const [formData, setFormData] = useState({});
 
+  // Function to clear form data
+  const clearFormData = () => {
+    setFormData({
+      name: "",
+      category: "",
+      price: null,
+      discountPrice: null,
+      availability: undefined,
+      description: "",
+      images: [],
+      specifications: {
+        carat: "",
+        clarity: "",
+        color: "",
+        metal: "",
+      },
+    });
+    setShowValidation(false); // Reset validation state
+  };
+
   useEffect(() => {
-    setFormData(itemsId?.item);
+    if (itemsId?.item) {
+      setFormData(itemsId.item);
+    } else {
+      // Clear form data when opening for create mode
+      clearFormData();
+    }
     // Clear deleted images when modal opens with new data
     setDeletedImages([]);
   }, [itemsId]);
 
-  // Clear deleted images when modal closes
+  // Fetch categories when modal opens
+  useEffect(() => {
+    if (isOpen && (!categories || categories.length === 0)) {
+      getAllCategories(1, false);
+    }
+  }, [isOpen]);
+
+  // Clear form data and deleted images when modal closes
   useEffect(() => {
     if (!isOpen) {
+      clearFormData();
       setDeletedImages([]);
     }
   }, [isOpen]);
@@ -133,6 +168,40 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
   console.log("Current formData images:", formData?.images);
 
   const handleSubmit = async () => {
+    // Show validation errors
+    setShowValidation(true);
+
+    // Validate required fields
+    const requiredFields = {
+      name: formData?.name?.trim(),
+      category: formData?.category,
+      price: formData?.price,
+      discountPrice: formData?.discountPrice,
+      availability: formData?.availability,
+      images: formData?.images?.length > 0,
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingFields.length > 0) {
+      const fieldNames = {
+        name: "Name",
+        category: "Category",
+        price: "Price",
+        discountPrice: "Discount Price",
+        availability: "Availability",
+        images: "Images",
+      };
+
+      const missingFieldNames = missingFields
+        .map((field) => fieldNames[field])
+        .join(", ");
+      message.error(`Please fill in all required fields: ${missingFieldNames}`);
+      return;
+    }
+
     try {
       setLoading(true);
       const uploadedImages = [];
@@ -197,8 +266,9 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
 
           message.success("Item updated successfully!");
           onSuccess && onSuccess(); // Refresh the items list
-          onClose();
+          clearFormData(); // Clear form data
           setDeletedImages([]); // Clear deleted images state
+          onClose();
         }
       } else {
         const createResponse = await getItemsCreate(payload);
@@ -206,6 +276,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
         if (createResponse) {
           message.success("Item created successfully!");
           onSuccess && onSuccess(); // Refresh the items list
+          clearFormData(); // Clear form data
           onClose();
         }
       }
@@ -218,6 +289,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
   };
 
   const handleClose = () => {
+    clearFormData(); // Clear form data when modal is closed
     setDeletedImages([]); // Clear deleted images when modal is closed
     onClose();
   };
@@ -242,45 +314,117 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
             Add / Edit Item
           </h2>
 
-          <Form.Item label="Name" required>
+          <Form.Item
+            label="Name"
+            required
+            validateStatus={
+              showValidation && !formData?.name?.trim() ? "error" : ""
+            }
+            help={
+              showValidation && !formData?.name?.trim()
+                ? "Name is required"
+                : ""
+            }
+          >
             <Input
               value={formData?.name}
               onChange={(e) => handleChange("name", e.target.value)}
+              placeholder="Enter item name"
             />
           </Form.Item>
 
-          <Form.Item label="Category" required>
-            <Input
+          <Form.Item
+            label="Category"
+            required
+            validateStatus={
+              showValidation && !formData?.category ? "error" : ""
+            }
+            help={
+              showValidation && !formData?.category
+                ? "Category is required"
+                : ""
+            }
+          >
+            <Select
+              placeholder="Select a category"
               value={formData?.category}
-              onChange={(e) => handleChange("category", e.target.value)}
-            />
+              onChange={(value) => handleChange("category", value)}
+              showSearch
+              filterOption={(input, option) =>
+                option?.label?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {categories?.map((category) => (
+                <Option
+                  key={category._id}
+                  value={category.name}
+                  label={category.name}
+                >
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Price" required>
+              <Form.Item
+                label="Price"
+                required
+                validateStatus={
+                  showValidation && !formData?.price ? "error" : ""
+                }
+                help={
+                  showValidation && !formData?.price ? "Price is required" : ""
+                }
+              >
                 <InputNumber
                   style={{ width: "100%" }}
                   value={formData?.price}
                   min={0}
                   onChange={(value) => handleChange("price", value)}
+                  placeholder="Enter price"
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Discount Price" required>
+              <Form.Item
+                label="Discount Price"
+                required
+                validateStatus={
+                  showValidation && !formData?.discountPrice ? "error" : ""
+                }
+                help={
+                  showValidation && !formData?.discountPrice
+                    ? "Discount price is required"
+                    : ""
+                }
+              >
                 <InputNumber
                   style={{ width: "100%" }}
                   value={formData?.discountPrice}
                   min={0}
                   onChange={(value) => handleChange("discountPrice", value)}
+                  placeholder="Enter discount price"
                 />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item label="Availability" required>
+          <Form.Item
+            label="Availability"
+            required
+            validateStatus={
+              showValidation && !formData?.availability ? "error" : ""
+            }
+            help={
+              showValidation && !formData?.availability
+                ? "Availability is required"
+                : ""
+            }
+          >
             <Select
+              placeholder="Select availability"
               value={formData?.availability}
               onChange={(value) => handleChange("availability", value)}
             >
@@ -289,7 +433,18 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Images" required>
+          <Form.Item
+            label="Images"
+            required
+            validateStatus={
+              showValidation && !formData?.images?.length ? "error" : ""
+            }
+            help={
+              showValidation && !formData?.images?.length
+                ? "At least one image is required"
+                : ""
+            }
+          >
             <Dragger
               multiple
               accept="image/*"
