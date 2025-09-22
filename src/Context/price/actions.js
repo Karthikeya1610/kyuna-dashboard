@@ -1,0 +1,6 @@
+export const Actions = {
+  GET_PRICE: "GET_PRICE",
+  UPDATE_PRICE: "UPDATE_PRICE",
+  SET_LOADING: "SET_LOADING",
+  SET_ERROR: "SET_ERROR",
+};

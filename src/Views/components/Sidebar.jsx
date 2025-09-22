@@ -9,6 +9,7 @@ import {
   X,
   LogOut,
   Grid,
+  DollarSignIcon,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -42,6 +43,12 @@ const Sidebar = ({ onLogout }) => {
       label: "Categories",
       icon: Grid,
       path: "/dashboard/categories",
+    },
+    {
+      id: "Pricing",
+      label: "Pricing",
+      icon: DollarSignIcon,
+      path: "/dashboard/price",
     },
   ];
 

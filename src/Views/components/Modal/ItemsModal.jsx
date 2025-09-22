@@ -41,16 +41,16 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
     setFormData({
       name: "",
       category: "",
-      price: null,
-      discountPrice: null,
+      price: 0,
+      discountPrice: 0,
       availability: undefined,
       description: "",
+      weight: "",
       images: [],
       specifications: {
-        carat: "",
-        clarity: "",
         color: "",
         metal: "",
+        weight: "",
       },
     });
     setShowValidation(false); // Reset validation state
@@ -175,10 +175,9 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
     const requiredFields = {
       name: formData?.name?.trim(),
       category: formData?.category,
-      price: formData?.price,
-      discountPrice: formData?.discountPrice,
       availability: formData?.availability,
       images: formData?.images?.length > 0,
+      weight: formData?.weight?.trim(),
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -189,10 +188,9 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
       const fieldNames = {
         name: "Name",
         category: "Category",
-        price: "Price",
-        discountPrice: "Discount Price",
         availability: "Availability",
         images: "Images",
+        weight: "Weight",
       };
 
       const missingFieldNames = missingFields
@@ -334,6 +332,25 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
           </Form.Item>
 
           <Form.Item
+            label="Weight"
+            required
+            validateStatus={
+              showValidation && !formData?.weight?.trim() ? "error" : ""
+            }
+            help={
+              showValidation && !formData?.weight?.trim()
+                ? "Weight is required"
+                : ""
+            }
+          >
+            <Input
+              value={formData?.weight}
+              onChange={(e) => handleChange("weight", e.target.value)}
+              placeholder="Enter weight (e.g., 2.5g, 1.2kg)"
+            />
+          </Form.Item>
+
+          <Form.Item
             label="Category"
             required
             validateStatus={
@@ -368,16 +385,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="Price"
-                required
-                validateStatus={
-                  showValidation && !formData?.price ? "error" : ""
-                }
-                help={
-                  showValidation && !formData?.price ? "Price is required" : ""
-                }
-              >
+              <Form.Item label="Price">
                 <InputNumber
                   style={{ width: "100%" }}
                   value={formData?.price}
@@ -388,18 +396,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="Discount Price"
-                required
-                validateStatus={
-                  showValidation && !formData?.discountPrice ? "error" : ""
-                }
-                help={
-                  showValidation && !formData?.discountPrice
-                    ? "Discount price is required"
-                    : ""
-                }
-              >
+              <Form.Item label="Discount Price">
                 <InputNumber
                   style={{ width: "100%" }}
                   value={formData?.discountPrice}
@@ -493,25 +490,6 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
           </Form.Item>
 
           <h3 style={{ marginTop: 20 }}>Specifications</h3>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="Carat">
-                <Input
-                  value={formData?.specifications?.carat}
-                  onChange={(e) => handleSpecChange("carat", e.target.value)}
-                />
-              </Form.Item>
-            </Col>
-            x
-            <Col span={12}>
-              <Form.Item label="Clarity">
-                <Input
-                  value={formData?.specifications?.clarity}
-                  onChange={(e) => handleSpecChange("clarity", e.target.value)}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
 
           <Row gutter={16}>
             <Col span={12}>

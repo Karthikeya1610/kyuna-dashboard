@@ -14,6 +14,7 @@ const initialData = {
   discountPrice: "",
   rating: "",
   availability: "",
+  weight: "",
   images: [],
   description: "",
   specifications: [],
@@ -301,8 +302,9 @@ const Items = () => {
                 <th>Image</th>
                 <th>Name</th>
                 <th>Category</th>
-                <th>Price</th>
-                <th>Discount Price</th>
+                <th>Weight</th>
+                {/* <th>Price</th>
+                <th>Discount Price</th> */}
                 <th>Rating</th>
                 <th>Availability</th>
                 <th>Actions</th>
@@ -336,12 +338,8 @@ const Items = () => {
                         </div>
                       </td>
                       <td className="item-category">{item.category}</td>
-                      <td className="item-price">
-                        ${item.price.toLocaleString()}
-                      </td>
-                      <td className="item-discount">
-                        ${item.discountPrice.toLocaleString()}
-                      </td>
+                      <td className="item-weight">{item?.weight || "N/A"}</td>
+
                       <td className="item-rating">{item.rating} ⭐</td>
                       <td className="item-availability">{item.availability}</td>
                       <td>
@@ -390,12 +388,13 @@ const Items = () => {
                         </div>
                       </td>
                       <td className="item-category">{item.category}</td>
-                      <td className="item-price">
+                      <td className="item-weight">{item?.weight || "N/A"}</td>
+                      {/* <td className="item-price">
                         ${item.price.toLocaleString()}
                       </td>
                       <td className="item-discount">
                         ${item.discountPrice.toLocaleString()}
-                      </td>
+                      </td> */}
                       <td className="item-rating">{item.rating} ⭐</td>
                       <td className="item-availability">{item.availability}</td>
                       <td>

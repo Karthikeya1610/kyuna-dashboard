@@ -4,6 +4,7 @@ import { ItemState } from "./Items/state";
 import { OrderState } from "./orders/state";
 import { QueryState } from "./queries/state";
 import { CategoryState } from "./categories/state";
+import { PriceState } from "./price/state";
 
 const useCombineState = () => {
   const auth = AuthState();
@@ -11,6 +12,7 @@ const useCombineState = () => {
   const orders = OrderState();
   const queries = QueryState();
   const categories = CategoryState();
+  const price = PriceState();
   return useMemo(
     () => ({
       auth,
@@ -18,8 +20,9 @@ const useCombineState = () => {
       orders,
       queries,
       categories,
+      price,
     }),
-    [auth, items, orders, queries, categories]
+    [auth, items, orders, queries, categories, price]
   );
 };
 

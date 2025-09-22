@@ -5,6 +5,7 @@ import Orders from "./Orders";
 import Items from "./Items";
 import Queries from "./Queries";
 import Categories from "./Categories";
+import Price from "./Price";
 import "./AdminDashboard.css";
 
 const AdminDashboard = ({ onLogout }) => {
@@ -20,6 +21,7 @@ const AdminDashboard = ({ onLogout }) => {
           <Route path="items" element={<Items />} />
           <Route path="categories" element={<Categories />} />
           <Route path="queries" element={<Queries />} />
+          <Route path="price" element={<Price />} />
         </Routes>
       </main>
     </div>
