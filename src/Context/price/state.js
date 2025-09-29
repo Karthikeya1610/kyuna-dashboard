@@ -63,7 +63,7 @@ export const PriceState = () => {
       dispatch({ type: Actions.SET_LOADING, payload: true });
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `${API_URLS.PRICES}/${priceId}`,
+        `${API_URLS.PRICES}/update/${priceId}`,
         payload,
         {
           headers: {
@@ -86,11 +86,14 @@ export const PriceState = () => {
     try {
       dispatch({ type: Actions.SET_LOADING, payload: true });
       const token = localStorage.getItem("token");
-      const response = await axios.delete(`${API_URLS.PRICES}/${priceId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.delete(
+        `${API_URLS.PRICES}/delete/${priceId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       dispatch({ type: Actions.DELETE_PRICE, payload: priceId });
 
       return response.data;
