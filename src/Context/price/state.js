@@ -5,6 +5,7 @@ import API_URLS from "../../Services/config";
 import { Actions } from "./actions";
 
 export const initialState = {
+  prices: [],
   price: null,
   priceId: null,
   loading: false,
@@ -18,12 +19,35 @@ export const PriceState = () => {
     try {
       dispatch({ type: Actions.SET_LOADING, payload: true });
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URLS.PRICES}/active`, {
+      const response = await axios.get(`${API_URLS.PRICES}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      dispatch({ type: Actions.GET_PRICE, payload: response.data.price });
+      dispatch({
+        type: Actions.GET_PRICES,
+        payload: response.data.prices,
+      });
+
+      return response.data;
+    } catch (error) {
+      dispatch({ type: Actions.SET_ERROR, payload: error.message });
+      return error;
+    } finally {
+      dispatch({ type: Actions.SET_LOADING, payload: false });
+    }
+  };
+
+  const createPrice = async (payload) => {
+    try {
+      dispatch({ type: Actions.SET_LOADING, payload: true });
+      const token = localStorage.getItem("token");
+      const response = await axios.post(`${API_URLS.PRICES}/add`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      dispatch({ type: Actions.CREATE_PRICE, payload: response.data.price });
 
       return response.data;
     } catch (error) {
@@ -58,9 +82,31 @@ export const PriceState = () => {
     }
   };
 
+  const deletePrice = async (priceId) => {
+    try {
+      dispatch({ type: Actions.SET_LOADING, payload: true });
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(`${API_URLS.PRICES}/${priceId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      dispatch({ type: Actions.DELETE_PRICE, payload: priceId });
+
+      return response.data;
+    } catch (error) {
+      dispatch({ type: Actions.SET_ERROR, payload: error.message });
+      return error;
+    } finally {
+      dispatch({ type: Actions.SET_LOADING, payload: false });
+    }
+  };
+
   return {
     ...state,
     getPrice,
+    createPrice,
     updatePrice,
+    deletePrice,
   };
 };

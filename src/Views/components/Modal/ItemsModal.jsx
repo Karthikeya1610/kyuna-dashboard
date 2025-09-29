@@ -33,6 +33,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
       deleteImage,
     },
     categories: { getAllCategories, categories },
+    price: { getPrice, prices },
   } = useContext(context);
   const [formData, setFormData] = useState({});
 
@@ -41,20 +42,26 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
     setFormData({
       name: "",
       category: "",
-      price: 0,
-      discountPrice: 0,
+      price: 100000,
+      discountPrice: 99999,
       availability: undefined,
       description: "",
-      weight: "",
+      weight: undefined,
       images: [],
       specifications: {
         color: "",
         metal: "",
-        weight: "",
+        weight: undefined,
+        priceCategory: "",
       },
     });
     setShowValidation(false); // Reset validation state
   };
+  useEffect(() => {
+    if (isOpen && (!prices || prices.length === 0)) {
+      getPrice();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (itemsId?.item) {
@@ -177,7 +184,11 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
       category: formData?.category,
       availability: formData?.availability,
       images: formData?.images?.length > 0,
-      weight: formData?.weight?.trim(),
+      weight:
+        formData?.weight !== undefined &&
+        formData?.weight !== null &&
+        formData?.weight !== "",
+      priceCategory: formData?.specifications?.priceCategory,
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -191,6 +202,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
         availability: "Availability",
         images: "Images",
         weight: "Weight",
+        priceCategory: "Price",
       };
 
       const missingFieldNames = missingFields
@@ -335,18 +347,29 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
             label="Weight"
             required
             validateStatus={
-              showValidation && !formData?.weight?.trim() ? "error" : ""
+              showValidation &&
+              (formData?.weight === undefined ||
+                formData?.weight === null ||
+                formData?.weight === "")
+                ? "error"
+                : ""
             }
             help={
-              showValidation && !formData?.weight?.trim()
+              showValidation &&
+              (formData?.weight === undefined ||
+                formData?.weight === null ||
+                formData?.weight === "")
                 ? "Weight is required"
                 : ""
             }
           >
-            <Input
+            <InputNumber
+              style={{ width: "100%" }}
               value={formData?.weight}
-              onChange={(e) => handleChange("weight", e.target.value)}
-              placeholder="Enter weight (e.g., 2.5g, 1.2kg)"
+              onChange={(value) => handleChange("weight", value)}
+              placeholder="Enter weight"
+              min={0}
+              step={0.1}
             />
           </Form.Item>
 
@@ -384,7 +407,7 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
           </Form.Item>
 
           <Row gutter={16}>
-            <Col span={12}>
+            {/* <Col span={12}>
               <Form.Item label="Price">
                 <InputNumber
                   style={{ width: "100%" }}
@@ -405,9 +428,35 @@ const ItemsModal = ({ isOpen, onClose, actionType, isLoading, onSuccess }) => {
                   placeholder="Enter discount price"
                 />
               </Form.Item>
-            </Col>
+            </Col> */}
           </Row>
-
+          <Form.Item
+            label="Price (₹)"
+            required
+            validateStatus={
+              showValidation && !formData?.specifications?.priceCategory
+                ? "error"
+                : ""
+            }
+            help={
+              showValidation && !formData?.specifications?.priceCategory
+                ? "Price is required"
+                : ""
+            }
+          >
+            <Select
+              style={{ width: "100%" }}
+              value={formData?.specifications?.priceCategory}
+              onChange={(value) => handleSpecChange("priceCategory", value)}
+              placeholder="Select price"
+            >
+              {prices?.map((price) => (
+                <Option key={price._id} value={price._id}>
+                  {price.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
           <Form.Item
             label="Availability"
             required

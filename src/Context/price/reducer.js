@@ -9,11 +9,32 @@ const Reducer = (state, action) => {
         priceId: action.payload.id || action.payload._id,
         error: null,
       };
+    case Actions.GET_PRICES:
+      return {
+        ...state,
+        prices: action.payload,
+        error: null,
+      };
+    case Actions.CREATE_PRICE:
+      return {
+        ...state,
+        prices: [action.payload, ...state.prices],
+        error: null,
+      };
     case Actions.UPDATE_PRICE:
       return {
         ...state,
+        prices: state.prices.map((price) =>
+          price._id === action.payload._id ? action.payload : price
+        ),
         price: action.payload,
         priceId: action.payload.id || action.payload._id,
+        error: null,
+      };
+    case Actions.DELETE_PRICE:
+      return {
+        ...state,
+        prices: state.prices.filter((price) => price._id !== action.payload),
         error: null,
       };
     case Actions.SET_LOADING:

@@ -173,10 +173,7 @@ const Items = () => {
 
     // Show initial loading message
     const loadingKey = "deleteItem";
-    const loadingMessage = messageApi.loading(
-      `Deleting ${item.name} and associated data...`,
-      0
-    );
+    let loadingMessage;
 
     try {
       setDeleteModalState((prev) => ({
@@ -190,9 +187,10 @@ const Items = () => {
           `Deleting ${item.images.length} images for item: ${item.name}`
         );
 
-        // Update loading message for image deletion
-        loadingMessage.then(() =>
-          messageApi.loading(`Deleting ${item.images.length} image(s)...`, 0)
+        // Show loading message for image deletion
+        loadingMessage = messageApi.loading(
+          `Deleting ${item.images.length} image(s)...`,
+          0
         );
 
         for (const image of item.images) {
@@ -211,16 +209,26 @@ const Items = () => {
         }
       }
 
-      // Update loading message for item deletion
-      loadingMessage.then(() =>
-        messageApi.loading(`Deleting item record...`, 0)
-      );
+      // Show loading message for item deletion
+      if (loadingMessage) {
+        loadingMessage();
+      }
+      loadingMessage = messageApi.loading(`Deleting item record...`, 0);
 
       // Then delete the item
       const deleteResponse = await getItemsDelete(item._id);
       if (deleteResponse) {
         // Refresh the items list after successful deletion
         await getItems(1, false, debouncedSearchTerm);
+
+        // Close loading message and show success
+        if (loadingMessage) {
+          loadingMessage();
+        }
+        messageApi.success(
+          `${item.name} and associated images deleted successfully!`,
+          3
+        );
 
         // Close modal
         setDeleteModalState((prev) => ({
@@ -230,23 +238,17 @@ const Items = () => {
           isLoading: false,
           isDeleting: false,
         }));
-
-        // Close loading message and show success
-        loadingMessage.then(() => {
-          messageApi.success(
-            `${item.name} and associated images deleted successfully!`,
-            3
-          );
-        });
       }
     } catch (error) {
       console.error("Error deleting item:", error);
 
       // Close loading message and show error
-      loadingMessage.then(() => {
-        messageApi.error(`Failed to delete ${item.name}. Please try again.`, 4);
-      });
-    } finally {
+      if (loadingMessage) {
+        loadingMessage();
+      }
+      messageApi.error(`Failed to delete ${item.name}. Please try again.`, 4);
+
+      // Reset deleting state on error
       setDeleteModalState((prev) => ({
         ...prev,
         isDeleting: false,
